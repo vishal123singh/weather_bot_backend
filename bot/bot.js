@@ -3,10 +3,14 @@ dotenv.config();
 import TelegramBot from 'node-telegram-bot-api';
 import User from '../models/User.js';
 
-const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true });
+// Use webhook mode, not polling
+const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN);
 
+const WEBHOOK_URL = `${process.env.BASE_URL}/bot${process.env.TELEGRAM_BOT_TOKEN}`;
+bot.setWebHook(WEBHOOK_URL);
+
+// Bot handlers
 bot.onText(/\/start/, async (msg) => {
-    console.log("msg",msg)
   const chatId = msg.chat.id;
   let user = await User.findOne({ telegramId: chatId });
   if (!user) {
@@ -18,7 +22,7 @@ bot.onText(/\/start/, async (msg) => {
 
 bot.onText(/\/subscribe/, async (msg) => {
   const chatId = msg.chat.id;
-  const user = await User.findOneAndUpdate(
+  await User.findOneAndUpdate(
     { telegramId: chatId },
     { subscribed: true },
     { new: true, upsert: true }
