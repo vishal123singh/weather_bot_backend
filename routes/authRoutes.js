@@ -62,7 +62,7 @@ router.post('/login', async (req, res) => {
     }
 
     // ✅ Manual dev login fallback
-    if (email === 'admin' && password === 'admin' && process.env.NODE_ENV !== 'production') {
+    if (email === 'admin@weatherbot' && password === 'admin' && process.env.NODE_ENV !== 'production') {
       const token = jwt.sign(
         { id: 'admin', email: 'admin' },
         process.env.JWT_SECRET,
