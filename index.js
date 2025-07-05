@@ -31,7 +31,7 @@ app.post('/webhook', (req, res) => {
 app.use('/api/users', userRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/auth', authRoutes);
-app.post('/api/send-weather', sendWeather);
+app.get('/api/send-weather', sendWeather);
 
 // Connect DB and start server
 connect(process.env.MONGO_URI).then(() => {
