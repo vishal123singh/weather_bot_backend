@@ -7,7 +7,8 @@ import User from '../models/User.js';
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN);
 
 const WEBHOOK_URL = `${process.env.BASE_URL}/bot${process.env.TELEGRAM_BOT_TOKEN}`;
-bot.setWebHook(WEBHOOK_URL);
+
+bot.setWebHook(`${process.env.BASE_URL}/webhook`);
 
 // Bot handlers
 bot.onText(/\/start/, async (msg) => {

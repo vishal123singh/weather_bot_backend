@@ -19,10 +19,13 @@ app.use(json());
 app.use(passport.initialize());
 
 // 🟢 Webhook endpoint for Telegram
-app.post(`/bot${process.env.TELEGRAM_BOT_TOKEN}`, (req, res) => {
+// server.js or index.js
+app.post('/webhook', (req, res) => {
+  console.log("➡️ Telegram webhook hit");
   bot.processUpdate(req.body);
   res.sendStatus(200);
 });
+
 
 // Other APIs
 app.use('/api/users', userRoutes);
