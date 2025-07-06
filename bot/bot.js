@@ -9,18 +9,44 @@ import Setting from '../models/Setting.js';
 const webhookUrl = `${process.env.BASE_URL}/webhook`;
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { webHook: true });
 
-// ✅ Set webhook with error handling
 bot.setWebHook(webhookUrl)
   .then(() => console.log('✅ Webhook set to:', webhookUrl))
   .catch(err => console.error('❌ Failed to set webhook:', err));
 
 const pendingCityInputs = new Map();
 
-// 🧠 Utility: Format weather message
+// 🧠 Format weather message
 function getWeatherMessage(data) {
   return `🌤 *Weather for ${data.location.name}, ${data.location.country}:*\n` +
     `${data.current.condition.text}, ${data.current.temp_c}°C (feels like ${data.current.feelslike_c}°C)\n` +
     `💧 Humidity: ${data.current.humidity}%\n💨 Wind: ${data.current.wind_kph} kph`;
+}
+
+// ✅ Reusable weather fetch logic
+async function fetchAndSendWeather(chatId) {
+  try {
+    const user = await User.findOne({ telegramId: chatId });
+    if (!user || !user.subscribed || !user.city) {
+      return bot.sendMessage(chatId, '❌ You are not subscribed or haven’t set a city. Use /subscribe to start.');
+    }
+
+    const apiKeySetting = await Setting.findOne({ key: 'weatherApiKey' });
+    const apiKey = apiKeySetting?.value;
+    if (!apiKey) return bot.sendMessage(chatId, '⚠️ Weather API key is not configured.');
+
+    const res = await fetch(`https://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${encodeURIComponent(user.city)}`);
+    if (!res.ok) {
+      console.error('Bad weather API response for city:', user.city);
+      return bot.sendMessage(chatId, `⚠️ Could not fetch weather for "${user.city}".`);
+    }
+
+    const data = await res.json();
+    const message = getWeatherMessage(data);
+    bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+  } catch (err) {
+    console.error('Error fetching weather:', err);
+    bot.sendMessage(chatId, '⚠️ Could not fetch weather.');
+  }
 }
 
 // /start
@@ -77,45 +103,21 @@ bot.onText(/\/setcity/, (msg) => {
 // /now
 bot.onText(/\/now/, async (msg) => {
   const chatId = msg.chat.id;
-
-  try {
-    const user = await User.findOne({ telegramId: chatId });
-    if (!user || !user.subscribed || !user.city) {
-      return bot.sendMessage(chatId, '❌ You are not subscribed or haven’t set a city. Use /subscribe to start.');
-    }
-
-    const apiKeySetting = await Setting.findOne({ key: 'weatherApiKey' });
-    const apiKey = apiKeySetting?.value;
-    if (!apiKey) return bot.sendMessage(chatId, '⚠️ Weather API key is not configured.');
-
-    const res = await fetch(`https://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${encodeURIComponent(user.city)}`);
-    if (!res.ok) {
-      console.error('Bad weather API response for city:', user.city);
-      return bot.sendMessage(chatId, `⚠️ Could not fetch weather for "${user.city}".`);
-    }
-
-    const data = await res.json();
-    const message = getWeatherMessage(data);
-    bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
-
-  } catch (err) {
-    console.error('Error in /now:', err);
-    bot.sendMessage(chatId, '⚠️ Could not fetch weather.');
-  }
+  await fetchAndSendWeather(chatId);
 });
 
-// Inline button: Get weather now
+// 📥 Inline "Get Weather Now" button handler
 bot.on('callback_query', async (query) => {
   const chatId = query.message.chat.id;
 
   if (query.data === 'get_weather_now') {
     bot.answerCallbackQuery(query.id);
     bot.sendMessage(chatId, '⏳ Getting the latest weather for you...');
-    bot.emit('text', { chat: { id: chatId }, text: '/now' });
+    await fetchAndSendWeather(chatId);
   }
 });
 
-// Message handler for city input
+// ✍️ Handle city name input
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   const text = msg.text?.trim();
