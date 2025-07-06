@@ -6,7 +6,7 @@ import fetch from 'node-fetch';
 import User from '../models/User.js';
 import Setting from '../models/Setting.js';
 
-const webhookUrl = `${process.env.BASE_URL}/webhook`;
+const webhookUrl = `${process.env.BASE_URL}webhook`;
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { webHook: true });
 
 bot.setWebHook(webhookUrl)
