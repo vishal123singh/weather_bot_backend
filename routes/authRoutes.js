@@ -1,3 +1,5 @@
+import dotenv from 'dotenv';
+dotenv.config();
 import { Router } from 'express';
 import passport from 'passport';
 import bcrypt from 'bcryptjs';
